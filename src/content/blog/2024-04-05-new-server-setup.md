@@ -115,9 +115,10 @@ Public key authentication is a more secure method of logging in to a server.
 Public key authentication uses a pair of keys: a public key and a private key.
 
 The public key is placed on the server and the private key is kept on your local
-machine. The public key is stored in the `~/.ssh/authorized_keys` file on the
-server in the user's home directory. It will look something like this (Either
-with `ssh-rsa` or `ssh-ed25519`):
+machine. The public key is stored in the
+[`~/.ssh/authorized_keys`](https://linux.die.net/man/8/sshd#:~:text=AUTHORIZED_KEYS%20FILE%20FORMAT)
+file on the server in the user's home directory. It will look something like
+this (Either with `ssh-rsa` or `ssh-ed25519`):
 
 ```bash
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZl ... 8J5z user@host
@@ -135,12 +136,94 @@ Once you have generated a key pair, you can copy the public key to the server
 using one of the methods in this guide:
 [How to copy SSH keys to a server](https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys-on-ubuntu-20-04).
 
+Once the public key is copied to the server, you can use an SSH terminal of your
+choice in combination with an SSH agent to login to the server using public key
+authentication. You will know you are using public key authentication if the
+server doesn't prompt you for a password when logging in.
+
 ### Configuring SSH Server
 
-- Change port
-- Disable root SSH access
-- Disable password authentication
-- Disable `DebianBanner`, `PermitEmptyPasswords`
+By default, the SSH server on Ubuntu isn't locked down which means that if you
+are exposing your server to the internet, you are at risk of being attacked.
+
+There are a number of steps you can take to secure your SSH server:
+
+- [Disable SSH access for the `root` account](#disable-ssh-access-for-the-root-account)
+- [Disable password authentication](#disable-password-authentication)
+- [Change the default SSH port](#change-the-default-ssh-port)
+- [Disable `DebianBanner`, `PermitEmptyPasswords`](#disable-debianbanner-permitemptypasswords)
+
+First, open the OpenSSH server config file
+([`/etc/ssh/sshd_config`](https://linux.die.net/man/5/sshd_config)) in your
+editor of choice. I will use [`nano`](https://linux.die.net/man/1/nano) in this
+example:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+For each of the following changes, the configuration line might already be in
+the file, but commented out. If it is, you can uncomment it by removing the `#`
+at the start of the line. If the line isn't in the file, you can add it to the
+end of the file.
+
+Remember, security is best done in layers ("defence in depth") so it's best to
+configure as many of these options as you can. The more layers of security you
+have, the harder it is for an attacker to compromise your server.
+
+#### Disable SSH access for the `root` account
+
+Disabling network access via SSH for the `root` account is encouraged as it
+means that direct access to the most privileged account must go through another
+less privileged account.
+
+To disable SSH access for the `root` account, you can set the `PermitRootLogin`
+option to `no`.
+
+#### Disable password authentication
+
+As mentioned earlier, public key authentication is more secure than password
+authentication. For this reason, it's preferred to completed disable password
+authentication if you are not going to use it.
+
+**Note: Make sure you have public key authentication working before disabling
+password authentication.**
+
+To disable password authentication, you can set the `PasswordAuthentication`
+option to `no`.
+
+#### Change the default SSH port
+
+While this step isn't strictly necessary, it can help provide some security
+through obscurity. Changing the default SSH port from `22` to something else can
+help reduce the number of automated attacks on your server.
+
+**Note: This step should not be used as security measure on its own! Some
+automated attacks will not be fooled with a changed port**
+
+To change the default SSH port, you can set the `Port` option to a port of your
+choice. Make sure to choose a port that isn't already in use by another service.
+
+I recommend using a port in a high range outside of the
+[TCP/IP "Well known" ports](https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers#Well-known_ports)
+(From `0` to `1023`) to avoid collisions with existing services.
+
+Make sure that you allow this port through your firewall if you are using one.
+
+#### Disable `DebianBanner`, `PermitEmptyPasswords`
+
+Finally, you can disable the `DebianBanner` and `PermitEmptyPasswords` options
+which provide an extra layer of security.
+
+Setting `DebianBanner` to `no` will prevent the SSH server from sending the
+Debian banner to the client. This can help prevent attackers from knowing what
+version of the SSH server you are running. While this isn't really a security
+measure, it can help prevent attackers from targeting known vulnerabilities in
+the SSH server.
+
+Setting `PermitEmptyPasswords` to `no` will prevent users from logging in with
+an empty password. This protects against the mistake of giving an empty password
+to a user which can be used to login to the SSH server.
 
 ### Setup Fail2Ban
 
